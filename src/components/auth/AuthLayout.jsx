@@ -1,0 +1,6 @@
+import { Brand } from '../layout/AppShell.jsx'
+import { Link, Badge } from '../ui/primitives.jsx'
+import Icon from '../ui/Icon.jsx'
+export default function AuthLayout({children}) {
+  return <div className="auth-shell"><header><Brand/><Link href="/markets">Explore without signing in <Icon name="arrow" size={16}/></Link></header><main id="main-content" className="auth-composition"><div className="auth-form-panel">{children}</div><aside className="auth-visual" aria-label="Panta Signal introduction"><Badge tone="purple">CURIOSITY, WITH CONTEXT</Badge><h2>Your next perspective<br/>starts here.</h2><p>Follow the questions. Understand the evidence. Find your community.</p><div className="auth-orbit" aria-hidden="true"><div className="brand-mark"><i/><i/><i/></div><span/><span/></div><div className="auth-visual-card"><span>ILLUSTRATIVE MARKET ? TECHNOLOGY</span><h3>What will the next wave of AI make possible?</h3><div><strong>72<span>%</span></strong><Badge>Illustrative preview</Badge></div><i/></div><p className="auth-security-note"><Icon name="shield"/>Wallet connection, ownership verification, and transaction approval are separate steps.</p></aside></main><footer><Link href="/legal/terms">Terms</Link><Link href="/legal/privacy">Privacy</Link><Link href="/support">Get help</Link><span>Account data stored on your server</span></footer></div>
+}

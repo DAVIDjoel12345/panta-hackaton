@@ -1,0 +1,51 @@
+/* Consistent gutters and section rhythm, scoped to the restored landing page. */
+.landing-page { --landing-gutter: clamp(20px, 4vw, 48px); --landing-space: clamp(56px, 7vw, 96px); }
+.landing-page .landing-hero,
+.landing-page .landing-container { width: 100%; max-width: 1248px; margin-inline: auto; padding-inline: var(--landing-gutter); }
+.landing-page .landing-hero { padding-block: clamp(48px, 7vw, 88px); gap: clamp(32px, 5vw, 72px); grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; }
+.landing-page .hero-copy,
+.landing-page .hero-product { min-width: 0; }
+.landing-page .hero-copy h1 { font-size: clamp(48px, 6.4vw, 84px); line-height: 1.04; letter-spacing: -.045em; margin-block: 24px; }
+.landing-page .hero-copy > p { max-width: 48ch; font-size: 16px; line-height: 1.7; margin-bottom: 24px; }
+.landing-page .hero-copy .button-row { gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.landing-page .hero-copy .button { min-height: 48px; }
+.landing-page .hero-product { margin: 0; }
+.landing-page .hero-insight { margin: 20px 0 0; }
+.landing-page .landing-section,
+.landing-page .landing-feature { padding-top: var(--landing-space); }
+.landing-page .section-heading { margin-bottom: 32px; }
+.landing-page .section-heading h2,
+.landing-page .landing-feature h2 { margin-block: 12px 16px; line-height: 1.2; }
+.landing-page .section-heading p { max-width: 64ch; margin-bottom: 0; }
+.landing-page .market-grid,
+.landing-page .three-columns,
+.landing-page .steps-grid { gap: 24px; }
+.landing-page .landing-explain .three-columns { align-items: stretch; }
+.landing-page .landing-explain .panel { display: flex; flex-direction: column; }
+.landing-page .landing-explain .panel > a { margin-top: auto; }
+.landing-page .text-link { margin-top: 24px; }
+.landing-page .room-card { min-width: 0; padding: 28px; }
+.landing-page .responsibility { margin-top: var(--landing-space); padding: 32px; }
+.landing-page .landing-faq { padding-top: var(--landing-space); }
+.landing-page .faq-item { padding-block: 20px; }
+.landing-page .faq-item p { margin: 16px 0 0; }
+.landing-page .final-cta { padding-block: var(--landing-space); }
+.landing-page .final-cta h2 { margin-block: 20px 28px; }
+@media (max-width: 767px) {
+  .landing-page .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .landing-page .hero-copy { max-width: 560px; }
+  .landing-page .hero-product { width: 100%; max-width: 520px; margin-inline: auto; }
+  .landing-page .market-grid,
+  .landing-page .three-columns,
+  .landing-page .steps-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .landing-page .market-grid > .market-card:last-child { display: block; }
+  .landing-page .landing-feature { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .landing-page .section-heading { margin-bottom: 24px; }
+  .landing-page .room-card,
+  .landing-page .responsibility { padding: 24px; }
+}
+@media (max-width: 380px) {
+  .landing-page .hero-copy .button-row { grid-template-columns: minmax(0, 1fr); }
+  .landing-page .hero-copy .button-row .button { width: 100%; }
+  .landing-page .hero-copy > .badge { white-space: normal; line-height: 1.6; }
+}

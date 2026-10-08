@@ -1,0 +1,9 @@
+@import './styles/app.css';
+@import './styles/mobile.css';
+
+@import './styles/auth.css';
+
+@import './styles/community.css';
+@import './styles/landing.css';
+@import './styles/workspace.css';
+@import './styles/trading-chart.css';

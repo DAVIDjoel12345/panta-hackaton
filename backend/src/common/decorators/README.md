@@ -1,0 +1,1 @@
+No authorization decorators are implemented. Future actor/permission decorators must derive identity from a verified session, never request body fields. AuthenticationGuard and AuthorizationGuard deny all requests.

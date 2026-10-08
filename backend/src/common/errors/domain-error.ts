@@ -1,0 +1,28 @@
+import type { RequestId, ValidationIssue } from '../contracts/primitives.js';
+/** Proposed transport mapping, not a registered exception filter. */
+export const errorHttpStatus = {
+  "AUTH_REQUIRED": 401,
+  "SESSION_EXPIRED": 401,
+  "ACCESS_DENIED": 403,
+  "VALIDATION_FAILED": 400,
+  "NOT_FOUND": 404,
+  "RATE_LIMITED": 429,
+  "UPSTREAM_UNAVAILABLE": 503,
+  "STALE_DATA": 409,
+  "MEMBERSHIP_REQUIRED": 403,
+  "MEMBERSHIP_PENDING": 403,
+  "MEMBER_MUTED": 403,
+  "POSTING_RESTRICTED": 403,
+  "MEMBER_BANNED": 403,
+  "POST_PENDING_APPROVAL": 409,
+  "COMMENTS_LOCKED": 409,
+  "QUOTE_EXPIRED": 409,
+  "MARKET_CLOSED": 409,
+  "CLAIM_NOT_ELIGIBLE": 409,
+  "TRANSACTION_PENDING": 409,
+  "NOT_IMPLEMENTED": 501,
+  "CONFLICT": 409
+} as const;
+export type ErrorCode = keyof typeof errorHttpStatus;
+export interface DomainErrorResponse { code: ErrorCode; message: string; requestId?: RequestId; issues?: ValidationIssue[]; retryAfterSeconds?: number; }
+

@@ -1,0 +1,86 @@
+import fs from 'node:fs'
+import assert from 'node:assert/strict'
+const browser = process.env.CHROME_URL || 'http://127.0.0.1:9223'
+const base = process.env.APP_URL || 'http://127.0.0.1:5174'
+const target=await(await fetch(`${browser}/json/new?about:blank`,{method:'PUT'})).json()
+const socket=new WebSocket(target.webSocketDebuggerUrl)
+await new Promise(resolve=>socket.addEventListener('open',resolve,{once:true}))
+let sequence=0
+const calls=new Map(),errors=[],results=[]
+socket.addEventListener('message',event=>{const msg=JSON.parse(event.data);if(msg.id){const cb=calls.get(msg.id);calls.delete(msg.id);if(msg.error)cb.reject(Error(JSON.stringify(msg.error)));else cb.resolve(msg.result)}if(msg.method==='Runtime.exceptionThrown')errors.push(msg.params.exceptionDetails.exception?.description||msg.params.exceptionDetails.text)})
+const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;calls.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})
+async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value}
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+async function wait(expression){for(let i=0;i<120;i++){if(await evaluate(expression))return;await delay(70)}throw Error(`Timed out: ${expression}`)}
+async function visit(url){await evaluate(`window.__pantaDirty=false;history.pushState({},'',${JSON.stringify(url)});window.dispatchEvent(new PopStateEvent('popstate'));window.scrollTo(0,0)`);await delay(100);await wait(`!!document.querySelector('h1,.state-panel h2,.empty h2')&&!document.querySelector('.route-loading')`)}
+async function click(text,selector='button'){await wait(`[...document.querySelectorAll(${JSON.stringify(selector)})].some(e=>e.textContent.trim()===${JSON.stringify(text)}&&e.getClientRects().length)`);await evaluate(`(()=>{const button=[...document.querySelectorAll(${JSON.stringify(selector)})].find(e=>e.textContent.trim()===${JSON.stringify(text)}&&e.getClientRects().length);if(!button)throw Error('Button missing: '+${JSON.stringify(text)});button.click()})()`);await delay(100)}
+async function input(selector,value){await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}))})()`);await delay(80)}
+async function check(name,expression){await wait(expression);assert.ok(await evaluate(expression),name);results.push(name)}
+await send('Runtime.enable');await send('Page.enable')
+const resize=async(width,height=900)=>{await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await delay(100)}
+const snap=async name=>{const s=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync('docs/screenshots/'+name+'.png',Buffer.from(s.data,'base64'))}
+// Match the nested text of the wallet selector without relying on visual glyphs.
+async function connect(){await evaluate(`document.querySelector('.auth-method').click()`);await delay(100);await click('Complete simulated connection')}
+async function verifyWallet(){for(const label of ['Prepare demo ownership challenge','Load fictional challenge','Simulate message signature','Simulate successful verification','Create demo session and continue'])await click(label)}
+await resize(1280)
+await send('Page.navigate',{url:base+'/auth'});await wait(`!!document.querySelector('.auth-heading')`)
+await snap('auth-methods-desktop')
+await check('Wallet primary, optional methods labelled demo',`document.querySelector('.auth-form-panel .primary').innerText==='Continue with wallet'&&document.querySelector('.auth-methods').innerText.includes('demo')`)
+await visit('/settings/account');await check('Guest gate does not render account fields',`document.body.innerText.includes('Sign in to your workspace')&&!document.querySelector('input[type=email]')`)
+await click('Continue to sign in','a');await wait(`!!document.querySelector('.auth-heading')`);await click('Continue with wallet','a');await wait(`!!document.querySelector('.auth-method')`)
+await connect();await click('Prepare demo ownership challenge');await click('Load fictional challenge')
+await check('Challenge contract binds fictional account',`document.querySelector('.auth-challenge').innerText.includes('DEMO-ALEX')&&document.querySelector('.auth-challenge').innerText.toLowerCase().includes('nonce')`)
+await click('Expire challenge');await check('Expired challenge removed',`!document.querySelector('.auth-challenge')&&document.body.innerText.includes('no longer usable')`)
+await click('Prepare demo ownership challenge');await click('Load fictional challenge');await input('.auth-form-panel select','DEMO-MIRA')
+await check('Account change invalidates pending challenge',`!document.querySelector('.auth-challenge')&&document.body.innerText.includes('Account changed')`)
+await verifyWallet();await wait(`location.pathname==='/settings/account'&&!!document.querySelector('input[type=email]')`)
+await check('Protected destination restored',`location.pathname==='/settings/account'`)
+await visit('/settings/wallet');await click('Remove association');await click('Simulate successful reauthentication');await click('Confirm simulated change')
+await check('Last usable method cannot be removed',`document.querySelector('dialog[open]').innerText.includes('last sign-in method')`)
+await click('Cancel','dialog[open] button');await delay(150)
+await visit('/auth/wallet?returnTo=%2Fsettings%2Fwallet');await input('.auth-form-panel select','DEMO-ALEX');await verifyWallet();await wait(`location.pathname==='/settings/wallet'&&!!document.querySelector('.auth-session-row')`)
+await check('Ownership proof does not silently add association',`document.querySelectorAll('.auth-session-row').length===1`)
+await click('Confirm selected wallet association');await click('Simulate successful reauthentication');await click('Confirm simulated change');await check('Association requires explicit confirmation',`document.querySelectorAll('.auth-session-row').length===2`)
+await click('Disconnect wallet only');await visit('/settings/account');await check('Disconnect is not logout',`!!document.querySelector('input[type=email]')`)
+await visit('/auth/login?demo=password');await input('input[type=email]','fictional@example.com');await input('input[name=password]','fictional-pass-123');await click('Show','button');await check('Password visibility toggle',`document.querySelector('input[name=password]').type==='text'`)
+await click('Continue demo login');await check('Password cleared after submission',`!document.querySelector('input[name=password]')`);await click('Simulate request failure');await check('Safe email retained after failure',`document.querySelector('input[type=email]').value==='fictional@example.com'&&document.querySelector('input[name=password]').value===''`)
+await visit('/auth/forgot-password?demo=password');await input('input[type=email]','fictional@example.com');await click('Request demo reset');await click('Continue simulated request');await click('Open demo reset link','a');await wait(`!!document.querySelector('input[name=password]')`)
+await input('input[name=password]','fictional-new-pass');await input('input[name=confirm-password]','different-long-pass');await click('Simulate password reset');await check('Password mismatch explained',`document.body.innerText.includes('matching passwords')`)
+await input('input[name=confirm-password]','fictional-new-pass');await click('Simulate password reset');await click('Simulate success');await click('Return to login');await wait(`location.pathname==='/auth/login'`)
+await visit('/auth/callback');await check('Callback refresh without pending request is invalid',`document.body.innerText.includes('Missing or invalid callback state')`)
+await visit('/auth');await click('Continue with Panta Example Provider · demo');await click('Open simulated callback');await wait(`document.body.innerText.includes('Simulate cancelled authorization')`);await click('Simulate cancelled authorization');await check('Cancelled provider does not create new session',`document.body.innerText.includes('Cancelled authorization')`)
+await visit('/settings/security');await click('Sign out everywhere · demo');await click('Simulate successful reauthentication');await click('Confirm simulated change');await wait(`location.pathname==='/auth'&&location.search.includes('loggedOut')`)
+await visit('/settings/account');await check('Logout clears session and protects identity',`document.body.innerText.includes('Sign in to your workspace')`)
+await visit('/auth/signup?demo=code&returnTo=%2Frooms%2Fcrypto');await input('input[name=name]','Demo Explorer');await input('input[type=email]','explorer@example.com');await evaluate(`document.querySelector('input[type=checkbox]').click()`);await click('Create demo account');await click('Continue simulated request');await wait(`location.pathname==='/auth/check-email'`)
+await check('Check email masks address and states no delivery',`document.querySelector('.auth-form-panel').innerText.includes('e•••@example.com')&&document.body.innerText.includes('NO EMAIL WAS SENT')`)
+await click('Simulate resend');await check('Resend cooldown explicit',`[...document.querySelectorAll('button')].some(b=>b.disabled&&b.innerText.includes('Resend cooldown'))`);await click('Advance demo cooldown')
+await click('Enter demo code','a');await wait(`!!document.querySelector('input[name="verification-code"]')`);await input('input[name="verification-code"]','123456');await click('Verify demo code');await click('Simulate failure');await check('Incorrect code recovery',`document.body.innerText.includes('Incorrect or expired demo code')`)
+await input('input[name="verification-code"]','654321');await click('Verify demo code');await click('Simulate success');await click('Continue to demo session');await wait(`location.pathname==='/onboarding'`)
+await click('Set up demo profile');await wait(`!!document.querySelector('input[autocomplete=username]')`);await input('input[autocomplete=name]','Demo Explorer');await input('input[autocomplete=username]','taken');await click('Save profile and continue');await check('Username conflict keeps safe values',`document.body.innerText.includes('username is unavailable')&&document.querySelector('input[autocomplete=name]').value==='Demo Explorer'`)
+await input('input[autocomplete=username]','demo_explorer');await click('Save profile and continue');await click('Complete demo save');await wait(`location.pathname==='/onboarding/interests'`);await click('AI','.category-filters button');await click('Continue');await wait(`location.pathname==='/onboarding/wallet'`)
+await check('Email onboarding does not verify wallet',`document.body.innerText.includes('No verified wallet')`)
+await click('Skip wallet and complete');await wait(`location.pathname==='/onboarding/complete'`);await check('Onboarding completion offers three destinations',`['/markets','/rooms','/create'].every(h=>document.querySelector('main a[href="'+h+'"]'))`)
+await visit('/onboarding/wallet');await click('Verify a demo wallet');await wait(`!!document.querySelector('.auth-method')`);await connect();await verifyWallet();await wait(`location.pathname==='/onboarding/wallet'`);await click('Complete setup');await check('Optional wallet verification preserves original onboarding destination',`[...document.querySelectorAll('main a')].some(a=>a.textContent==='Continue to intended destination'&&a.getAttribute('href')==='/rooms/crypto')`)
+await visit('/settings/wallet');await click('Disconnect wallet only')
+await visit('/onboarding');await check('Returning account does not restart setup',`document.body.innerText.includes('Your setup is complete')`)
+await visit('/markets/demo-btc?outcome=no');await input('.desktop-trade input[type=number]','47');await click('Review simulated trade');await click('Continue to demo approval');await wait(`location.pathname==='/auth/wallet'`)
+await check('Trade interruption retains safe return outcome',`new URLSearchParams(location.search).get('returnTo').includes('outcome=no')`)
+await connect();await verifyWallet();await wait(`location.pathname==='/markets/demo-btc'&&!!document.querySelector('.desktop-trade input')`)
+await check('Trade restored for review, never auto-submitted',`document.querySelector('.desktop-trade input[type=number]').value==='47'&&!document.querySelector('dialog[open]')&&document.querySelector('.desktop-trade .no').getAttribute('aria-pressed')==='true'`)
+await visit('/settings/security');await input('main select','offline');await check('Offline session retains displayed content',`document.body.innerText.includes('Previously displayed demo content')&&document.body.innerText.includes('Active demonstration sessions')`);await click('Restore demo session')
+await input('main select','checking');await check('Checking does not flash protected content',`!document.body.innerText.includes('Active demonstration sessions')`);await click('Finish demo session check')
+await visit('/dev/ui-states');await check('All 333 state previews render',`document.querySelectorAll('[data-state-id]').length===333`)
+const paths=['/auth','/auth/login?demo=password','/auth/signup?demo=password','/auth/wallet','/auth/check-email','/auth/verify-code','/auth/verify-email','/auth/forgot-password?demo=password','/auth/reset-password','/auth/callback','/auth/error','/auth/session-expired','/auth/mfa','/auth/recovery','/onboarding','/onboarding/profile','/onboarding/interests','/onboarding/wallet','/onboarding/complete','/settings/security','/settings/wallet','/settings/account','/settings/security/mfa','/']
+for(const width of [320,360,390,430,1280]){await resize(width);for(const path of paths){await visit(path);await check(`auth responsive ${width} ${path}`,`document.documentElement.scrollWidth<=${width}&&!document.body.innerText.includes('Unexpected error')`)}}
+await resize(390);await visit('/auth/login?demo=password');await snap('auth-login-mobile');await evaluate(`document.querySelector('input[type=email]').focus()`);await resize(390,440);await check('Auth keyboard viewport detected',`document.documentElement.dataset.keyboardOpen==='true'`)
+await evaluate(`document.activeElement.blur()`);await resize(1280);await visit('/auth/signup?demo=password');await snap('auth-signup-desktop')
+await check('No sensitive persistent storage',`!JSON.stringify({...localStorage,...sessionStorage}).includes('fictional-pass')&&!JSON.stringify({...localStorage,...sessionStorage}).includes('654321')`)
+await send('Page.navigate',{url:base+'/auth/verify-email'});await wait(`document.body.innerText.includes('Verification unavailable')`);await check('Verification reload fails closed',`document.body.innerText.includes('Start again')`)
+await evaluate(`sessionStorage.removeItem('panta-intro-seen')`);await send('Page.navigate',{url:base+'/'});await wait(`!!document.querySelector('.splash-overlay')`);await check('Landing stays mounted under intro',`!!document.querySelector('.landing-hero')`);await click('Skip intro');await check('Intro skip immediate',`!document.querySelector('.splash-overlay')`)
+await visit('/markets');await visit('/');await check('Intro plays once per browser session',`!document.querySelector('.splash-overlay')`)
+await evaluate(`sessionStorage.removeItem('panta-intro-seen')`);await send('Page.navigate',{url:base+'/'});await wait(`!!document.querySelector('.splash-overlay')`);await evaluate(`document.querySelector('.splash-overlay').style.animation='none'`);await delay(1600);await check('Animation failure fallback dismisses intro',`!document.querySelector('.splash-overlay')`)
+await evaluate(`sessionStorage.removeItem('panta-intro-seen')`);await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await send('Page.navigate',{url:base+'/'});await wait(`!!document.querySelector('.landing-hero')`);await check('Reduced motion skips intro',`!document.querySelector('.splash-overlay')`)
+await visit('/auth/login?demo=code');await input('input[type=email]','back@example.com');await click('Request demo code');await click('Continue simulated request');await click('Enter demo code','a');await wait(`!!document.querySelector('input[name="verification-code"]')`);await input('input[name="verification-code"]','123456');await evaluate('history.back()');await wait(`location.pathname==='/auth/check-email'`);await check('Back restores masked instructions without code in URL',`document.body.innerText.includes('b•••@example.com')&&!location.href.includes('123456')`)
+assert.equal(errors.length,0,errors.join('\n'))
+fs.writeFileSync('docs/auth-browser-results.json',JSON.stringify({passed:results.length,errors,checks:results},null,2))
+console.log(`PASS: ${results.length} authentication browser checks.`);await send('Page.close');socket.close()

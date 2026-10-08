@@ -1,0 +1,25 @@
+/** State identifiers only; no transitions or state store. */
+export const CREATION_STATE_IDS = [
+  "creation.emptyDraft",
+  "creation.draftLoading",
+  "creation.draftSaved",
+  "creation.unsavedChanges",
+  "creation.aiGenerating",
+  "creation.aiUnavailable",
+  "creation.invalidAiOutput",
+  "creation.ambiguousQuestion",
+  "creation.missingDeadline",
+  "creation.invalidDate",
+  "creation.missingResolutionSource",
+  "creation.incompleteResolutionCriteria",
+  "creation.possibleDuplicate",
+  "creation.draftValidationPassed",
+  "creation.feeQuoteLoading",
+  "creation.feeQuoteExpired",
+  "creation.feeQuoteFailed",
+  "creation.insufficientBalance",
+  "creation.creationRejected",
+  "creation.creationPending",
+  "creation.creationFailed",
+  "creation.creationConfirmed"
+]

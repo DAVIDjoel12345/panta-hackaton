@@ -1,0 +1,465 @@
+[
+  {
+    "id": "health",
+    "purpose": "Operational readiness boundary",
+    "persistenceRecord": null,
+    "states": [
+      "unavailable"
+    ],
+    "operations": 1,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "auth",
+    "purpose": "Identity proof and optional authentication methods",
+    "persistenceRecord": "AuthChallengeRecord",
+    "states": [
+      "challenge-issued",
+      "verification-pending",
+      "verified",
+      "expired",
+      "consumed",
+      "rejected"
+    ],
+    "operations": 15,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "sessions",
+    "purpose": "Application session lifecycle",
+    "persistenceRecord": "SessionRecord",
+    "states": [
+      "active",
+      "expired",
+      "revoked"
+    ],
+    "operations": 6,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "users",
+    "purpose": "Private current-user identity",
+    "persistenceRecord": "UserRecord",
+    "states": [
+      "active",
+      "deletion-requested",
+      "disabled"
+    ],
+    "operations": 1,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "profiles",
+    "purpose": "Public profile and private editing",
+    "persistenceRecord": "ProfileRecord",
+    "states": [
+      "incomplete",
+      "published"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "onboarding",
+    "purpose": "Interests and setup progress",
+    "persistenceRecord": "OnboardingResponse",
+    "states": [
+      "not-started",
+      "in-progress",
+      "complete"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "wallets",
+    "purpose": "Verified wallet associations, not connection state",
+    "persistenceRecord": "WalletAssociationResponse",
+    "states": [
+      "unverified",
+      "verified",
+      "revoked"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "markets",
+    "purpose": "Application discovery and provider reference metadata",
+    "persistenceRecord": "MarketMetadata",
+    "states": [
+      "unavailable",
+      "open",
+      "closed",
+      "resolved",
+      "cancelled"
+    ],
+    "operations": 6,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "market-data",
+    "purpose": "Optional provider snapshots and history",
+    "persistenceRecord": null,
+    "states": [
+      "unavailable",
+      "available",
+      "stale"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "market-drafts",
+    "purpose": "User-reviewed market proposals",
+    "persistenceRecord": "MarketDraftResponse",
+    "states": [
+      "draft",
+      "review-required",
+      "validated",
+      "deleted"
+    ],
+    "operations": 8,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "market-creation",
+    "purpose": "Creation intents, fees and reconciliation",
+    "persistenceRecord": "CreationIntentResponse",
+    "states": [
+      "draft",
+      "quote-requested",
+      "quote-ready",
+      "quote-expired",
+      "awaiting-approval",
+      "submitted",
+      "pending",
+      "confirmed",
+      "failed",
+      "expired",
+      "confirmation-unknown"
+    ],
+    "operations": 4,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "trading",
+    "purpose": "Purchase intents and bound quote review",
+    "persistenceRecord": "TradeIntentResponse",
+    "states": [
+      "draft",
+      "quote-requested",
+      "quote-ready",
+      "quote-expired",
+      "awaiting-approval",
+      "submitted",
+      "pending",
+      "confirmed",
+      "failed",
+      "expired",
+      "confirmation-unknown"
+    ],
+    "operations": 4,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "transactions",
+    "purpose": "Submission evidence and chain reconciliation",
+    "persistenceRecord": "TransactionObservation",
+    "states": [
+      "draft",
+      "quote-requested",
+      "quote-ready",
+      "quote-expired",
+      "awaiting-approval",
+      "submitted",
+      "pending",
+      "confirmed",
+      "failed",
+      "expired",
+      "confirmation-unknown"
+    ],
+    "operations": 4,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "positions",
+    "purpose": "Authoritative wallet-position reads",
+    "persistenceRecord": null,
+    "states": [
+      "unavailable",
+      "open",
+      "resolved"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "claims",
+    "purpose": "Claim eligibility separate from transaction state",
+    "persistenceRecord": "ClaimIntentResponse",
+    "states": [
+      "draft",
+      "quote-requested",
+      "quote-ready",
+      "quote-expired",
+      "awaiting-approval",
+      "submitted",
+      "pending",
+      "confirmed",
+      "failed",
+      "expired",
+      "confirmation-unknown"
+    ],
+    "operations": 7,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "ai-analysis",
+    "purpose": "Structured explanations, sources and missing data",
+    "persistenceRecord": "AnalysisResponse",
+    "states": [
+      "requested",
+      "pending",
+      "available",
+      "failed",
+      "stale"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "ai-conversations",
+    "purpose": "Private conversation history and prompts",
+    "persistenceRecord": "ConversationResponse",
+    "states": [
+      "active",
+      "archived",
+      "deleted"
+    ],
+    "operations": 5,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "communities",
+    "purpose": "Room directory, settings and ownership",
+    "persistenceRecord": "CommunityResponse",
+    "states": [
+      "active",
+      "archived"
+    ],
+    "operations": 7,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "memberships",
+    "purpose": "Membership status separate from scoped role",
+    "persistenceRecord": "MembershipResponse",
+    "states": [
+      "not-joined",
+      "pending",
+      "active",
+      "muted",
+      "posting-restricted",
+      "banned",
+      "left",
+      "rejected",
+      "revoked"
+    ],
+    "operations": 8,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "posts",
+    "purpose": "Posts, own drafts, approval and attachments",
+    "persistenceRecord": "PostResponse",
+    "states": [
+      "draft",
+      "pending-approval",
+      "published",
+      "rejected",
+      "removed",
+      "deleted"
+    ],
+    "operations": 11,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "comments",
+    "purpose": "Comments and bounded replies",
+    "persistenceRecord": "CommentResponse",
+    "states": [
+      "published",
+      "edited",
+      "removed",
+      "deleted"
+    ],
+    "operations": 5,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "likes",
+    "purpose": "Unique idempotent post and comment reactions",
+    "persistenceRecord": "LikeRecord",
+    "states": [
+      "liked",
+      "not-liked"
+    ],
+    "operations": 1,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "saved-content",
+    "purpose": "Private bookmarks for markets, posts and analyses",
+    "persistenceRecord": "SavedContentResponse",
+    "states": [
+      "saved",
+      "removed",
+      "unavailable"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "sharing",
+    "purpose": "Canonical links without granting access",
+    "persistenceRecord": null,
+    "states": [
+      "available",
+      "unavailable"
+    ],
+    "operations": 1,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "follows",
+    "purpose": "Public profile follow relationships",
+    "persistenceRecord": "FollowResponse",
+    "states": [
+      "following",
+      "not-following"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "reputation",
+    "purpose": "Forecast evidence and versioned methodology",
+    "persistenceRecord": "ForecastRecord",
+    "states": [
+      "unavailable",
+      "methodology-pending",
+      "available"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "leaderboards",
+    "purpose": "Aggregation boundary without invented rankings",
+    "persistenceRecord": null,
+    "states": [
+      "unavailable",
+      "pending",
+      "available"
+    ],
+    "operations": 1,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "creators",
+    "purpose": "Creator-owned markets and optional analytics",
+    "persistenceRecord": null,
+    "states": [
+      "unavailable",
+      "available"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "creator-fees",
+    "purpose": "Provider-supported fee claims only",
+    "persistenceRecord": "CreatorFeeIntentResponse",
+    "states": [
+      "draft",
+      "quote-requested",
+      "quote-ready",
+      "quote-expired",
+      "awaiting-approval",
+      "submitted",
+      "pending",
+      "confirmed",
+      "failed",
+      "expired",
+      "confirmation-unknown"
+    ],
+    "operations": 4,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "moderation",
+    "purpose": "Scoped moderation, restrictions and private audit",
+    "persistenceRecord": "ModerationReportRecord",
+    "states": [
+      "open",
+      "under-review",
+      "resolved",
+      "dismissed"
+    ],
+    "operations": 10,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "notifications",
+    "purpose": "Recipient-scoped events and delivery preferences",
+    "persistenceRecord": "NotificationResponse",
+    "states": [
+      "unread",
+      "read",
+      "delivery-pending",
+      "delivered",
+      "delivery-failed"
+    ],
+    "operations": 5,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "settings",
+    "purpose": "Private account preferences",
+    "persistenceRecord": "SettingsResponse",
+    "states": [
+      "default",
+      "customized"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "support",
+    "purpose": "Authenticated support intake",
+    "persistenceRecord": "SupportTicketResponse",
+    "states": [
+      "open",
+      "in-review",
+      "closed"
+    ],
+    "operations": 2,
+    "status": "scaffold-only"
+  },
+  {
+    "id": "account-lifecycle",
+    "purpose": "Export/deletion requests without deleting chain records",
+    "persistenceRecord": "AccountLifecycleResponse",
+    "states": [
+      "requested",
+      "review-required",
+      "pending",
+      "complete",
+      "failed",
+      "cancelled"
+    ],
+    "operations": 3,
+    "status": "scaffold-only"
+  }
+]

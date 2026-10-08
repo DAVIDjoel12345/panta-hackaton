@@ -1,0 +1,1 @@
+PostgreSQL is the proposed application database; ORM, schema, migrations and connection are intentionally absent. Cache, queues, object storage, email and observability exporters are optional future dependencies. See [integration decisions](../../docs/integration-open-questions.md). No Redis, SMTP, object-store client or queue worker is installed.

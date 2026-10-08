@@ -1,0 +1,26 @@
+/** State identifiers only; no transitions or state store. */
+export const TRADING_STATE_IDS = [
+  "trading.chooseYesNo",
+  "trading.enterAmount",
+  "trading.quoteLoading",
+  "trading.quoteReview",
+  "trading.quoteExpired",
+  "trading.quoteUnavailable",
+  "trading.insufficientTokenBalance",
+  "trading.insufficientNetworkFeeBalance",
+  "trading.unsupportedNetwork",
+  "trading.marketClosed",
+  "trading.tradingUnavailable",
+  "trading.transactionValidationFailure",
+  "trading.awaitingWalletApproval",
+  "trading.walletApprovalRejected",
+  "trading.transactionSubmitting",
+  "trading.transactionSubmitted",
+  "trading.transactionPendingConfirmation",
+  "trading.confirmationStatusUnknown",
+  "trading.transactionConfirmed",
+  "trading.transactionFailed",
+  "trading.transactionExpired",
+  "trading.transactionReconciliation",
+  "trading.transactionDetailsReceipt"
+]

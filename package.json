@@ -1,0 +1,26 @@
+{
+  "name": "hackaton",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "dev:full": "node scripts/start-local.mjs"
+  },
+  "dependencies": {
+    "@wallet-standard/app": "^1.1.1",
+    "buffer": "^6.0.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "@vitejs/plugin-react": "5.0.4",
+    "oxlint": "^1.81.0",
+    "vite": "^7.3.7"
+  }
+}

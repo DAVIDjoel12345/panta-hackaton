@@ -1,0 +1,10 @@
+import { useDemo } from '../../demo/useDemo.js'
+import { dateLabel, volumeLabel } from '../../demo/fixtures.js'
+import { Link, Badge, Button } from '../ui/primitives.jsx'
+import Icon from '../ui/Icon.jsx'
+export default function MarketCard({ market, compact = false, preview = false }) {
+  const { saved, toggleSave } = useDemo()
+  if (!market) return null
+  const marketHref = preview ? "/markets" : `/markets/${market.id}`
+  return <article className={`market-card ${compact ? 'compact-card' : ''}`}><div className="card-top"><span className={`symbol ${market.color}`}><Icon name={market.icon} size={24} /></span><div className="card-meta"><span>{market.category}</span><Badge tone={market.status === 'Resolved' ? 'purple' : 'positive'}>{market.status}</Badge></div>{!preview && <Button className={`icon-button save-button ${saved.includes(market.id) ? 'saved' : ''}`} icon="bookmark" aria-label={`${saved.includes(market.id) ? 'Unsave' : 'Save'} ${market.question}`} aria-pressed={saved.includes(market.id)} onClick={() => toggleSave(market.id)} />}</div><Link className="market-question" href={marketHref}>{market.question}</Link><div className="card-probability"><div><strong>{market.yes}<span>%</span></strong><small>YES probability</small></div><span className={market.movement >= 0 ? 'positive' : 'negative'}>{market.movement >= 0 ? '+' : ''}{market.movement} pp</span><svg viewBox="0 0 100 36" aria-label="Illustrative price trend" role="img"><polyline points={market.history.map((value, i) => `${i * 6.6},${34 - value * .3}`).join(' ')} fill="none" stroke={market.movement >= 0 ? '#18C783' : '#FF5572'} strokeWidth="2" /></svg></div><div className="outcome-prices"><Link href={preview ? marketHref : `${marketHref}?outcome=yes`} className="yes-price">YES <strong>{market.yes}¢</strong></Link><Link href={preview ? marketHref : `${marketHref}?outcome=no`} className="no-price">NO <strong>{100 - market.yes}¢</strong></Link></div><div className="card-footer"><span>{volumeLabel(market.volume)} <small>vol.</small></span><span><Icon name="clock" size={12} />{dateLabel(market.close)}</span></div></article>
+}

@@ -1,0 +1,70 @@
+import 'reflect-metadata';
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {NestFactory} from '@nestjs/core';
+import {AppModule} from '../dist/app.module.js';
+import {RuntimeStore} from '../dist/runtime/runtime-store.js';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+
+test('real sessions, community permissions, idempotency, events and persistence',async()=>{
+  const directory=mkdtempSync(join(tmpdir(),'panta-runtime-'));process.env.APP_DATABASE_PATH=join(directory,'test.sqlite');
+  const app=await NestFactory.create(AppModule,{logger:false});app.setGlobalPrefix('api/v1');await app.listen(0,'127.0.0.1');const base=(await app.getUrl())+'/api/v1';
+  const call=async(path,{method='GET',cookie='',body,origin='http://localhost:5173'}={})=>{const r=await fetch(base+path,{method,headers:{cookie,origin,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]}};
+  const command=(cookie,body)=>call('/communities/commands',{method:'POST',cookie,body:{requestId:crypto.randomUUID(),...body}});
+  const room={name:'Real community',slug:'real-room',description:'Persistent private research room.',rules:'Respect other members.',category:'Technology',cover:'purple',avatar:'RC',visibility:'private',membershipPolicy:'approval',postingPolicy:'members',commentsEnabled:true,approval:false};
+  const content={title:'Persisted post',text:'Private server-owned content.',type:'Discussion',link:'',marketId:'',attachments:[]};
+  let owner,member,post;
+  try{
+    assert.equal((await call('/bootstrap')).body.user,null);
+    assert.equal((await call('/auth/register',{method:'POST',origin:'https://hostile.example',body:{}})).status,403);
+    owner=await call('/auth/register',{method:'POST',body:{email:'owner@example.test',name:'Owner',password:' exact password spaces '}});assert.equal(owner.status,201);
+    assert.equal((await call('/auth/login',{method:'POST',body:{email:'owner@example.test',password:'exact password spaces'}})).status,401);
+    member=await call('/auth/register',{method:'POST',body:{email:'member@example.test',name:'Member',password:'another long password'}});assert.equal(member.status,201);
+    const memberId=(await call('/bootstrap',{cookie:member.cookie})).body.user.id;
+    const draft=await call('/market-drafts',{method:'POST',cookie:owner.cookie,body:{question:'Will this question resolve?',description:'Account-scoped draft',source:'https://example.com'}});
+    assert.equal(draft.status,201);
+    assert.equal((await call('/market-drafts',{cookie:member.cookie})).body.length,0);
+    assert.equal((await call('/market-drafts')).status,401);
+    const exported=await call('/account/export',{cookie:owner.cookie});
+    assert.equal(exported.status,200);assert.equal(exported.body.marketDrafts[0].id,draft.body.id);
+    assert.equal(JSON.stringify(exported.body).includes('password_hash'),false);
+    assert.equal((await call('/account/export')).status,401);
+    let events=0;const subscription=app.get(RuntimeStore).events.subscribe(()=>events++);
+    assert.equal((await command(owner.cookie,{type:'createRoom',value:{...room,slug:'constructor'}})).status,400);
+    const eventAbort=new AbortController();
+    const stream=await fetch(base+'/events',{signal:AbortSignal.any([eventAbort.signal,AbortSignal.timeout(5000)])});
+    const reader=stream.body.getReader();
+    const event=(async()=>{let received='';while(!received.includes('changed')){const part=await reader.read();if(part.done)break;received+=new TextDecoder().decode(part.value)}return received})();
+    assert.equal((await command(owner.cookie,{type:'createRoom',value:room})).status,201);
+    try{assert.match(await event,/changed/)}finally{eventAbort.abort()}
+    const requestId=crypto.randomUUID();const published=await command(owner.cookie,{type:'publish',room:room.slug,value:content,requestId});assert.equal(published.status,201);post=published.body.post;
+    assert.equal((await command(owner.cookie,{type:'publish',room:room.slug,value:content,requestId})).body.post,post);
+    assert.equal((await command(owner.cookie,{type:'publish',room:room.slug,value:{...content,text:'Changed'},requestId})).status,409);
+    assert.equal((await call('/communities/state')).body.posts.length,0);
+    assert.equal((await command(member.cookie,{type:'draft',room:room.slug,value:content})).status,403);
+    assert.equal((await command(member.cookie,{type:'membership',room:room.slug})).status,201);
+    assert.equal((await command(member.cookie,{type:'postAction',room:room.slug,post,verb:'remove',reason:'Forged owner'})).status,403);
+    assert.equal((await command(owner.cookie,{type:'memberAction',room:room.slug,user:memberId,verb:'approve',reason:'Reviewed'})).status,201);
+    assert.equal((await call('/communities/state',{cookie:member.cookie})).body.posts[0].text,content.text);
+    assert.equal((await command(member.cookie,{type:'comment',room:room.slug,post,text:'A real comment'})).status,201);
+    assert.equal((await command(member.cookie,{type:'comment',room:room.slug,post})).status,400);
+    assert.equal((await command(member.cookie,{type:'savePost',room:room.slug,post})).status,201);
+    assert.equal((await command(member.cookie,{type:'like',room:room.slug,post})).status,201);
+    assert.equal((await call('/communities/state',{cookie:owner.cookie})).body.notifications.length,2);
+    assert.equal((await command(owner.cookie,{type:'memberAction',room:room.slug,user:memberId,verb:'ban',reason:'Policy violation'})).status,201);
+    assert.equal((await call('/communities/state',{cookie:member.cookie})).body.posts.length,0);
+    assert.equal((await command(member.cookie,{type:'appeal',room:room.slug})).status,201);
+    assert.ok((await call('/communities/state',{cookie:owner.cookie})).body.history.some(e=>e.action==='Review requested'));
+    assert.equal((await command(member.cookie,{type:'removeSaved',post})).status,201);
+    assert.equal((await call('/communities/state',{cookie:member.cookie})).body.saved[memberId].length,0);
+    assert.ok(events>=6);subscription.unsubscribe();
+    assert.equal((await call('/settings/me',{method:'PUT',cookie:owner.cookie,body:{name:'Updated owner',bio:'Saved profile'}})).status,200);
+    assert.equal((await call('/ai/conversations',{cookie:member.cookie})).body.length,0);
+    assert.equal((await call('/ai/conversations')).status,401);
+    assert.equal((await call('/auth/logout',{method:'POST',cookie:member.cookie,body:{}})).status,201);
+    assert.equal((await command(member.cookie,{type:'membership',room:room.slug})).status,401);
+  }finally{await app.close()}
+  const reopened=new RuntimeStore();try{assert.equal(reopened.snapshot(owner.cookie).posts[0].id,post);assert.equal(reopened.user(owner.cookie).name,'Updated owner');assert.equal(reopened.user(member.cookie),null)}finally{reopened.onModuleDestroy();rmSync(directory,{recursive:true,force:true})}
+});

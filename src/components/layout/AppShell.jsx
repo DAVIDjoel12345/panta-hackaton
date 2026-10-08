@@ -1,0 +1,25 @@
+import {useCommunity} from '../../features/community/useCommunity.js'
+import { useState } from 'react'
+import { useDemo } from '../../demo/useDemo.js'
+import { Link, Button, Modal } from '../ui/primitives.jsx'
+import Icon from '../ui/Icon.jsx'
+import WalletControl from '../../features/wallet/WalletControl.jsx'
+import MobileChrome from '../navigation/MobileChrome.jsx'
+import { navigate } from '../../app/navigation.js'
+
+const primary = [['Explore', '/markets', 'compass'], ['Signal Rooms', '/rooms', 'users'], ['Signal AI', '/ai', 'sparkles'], ['Portfolio', '/portfolio', 'wallet'], ['Claims', '/claims', 'gift'], ['Create Market', '/create', 'plus']]
+const secondary = [['Saved', '/saved', 'bookmark'], ['Leaderboard', '/leaderboard', 'trophy'], ['Creator Dashboard', '/creator', 'chart'], ['Notifications', '/notifications', 'bell'], ['Settings', '/settings', 'settings'], ['Help', '/help', 'help']]
+export function Brand() { return <Link href="/" className="brand"><span className="brand-mark"><i /><i /><i /></span><span>Panta<span className="brand-light">Signal</span></span></Link> }
+export function Navigation({ route, collapsed = false, onNavigate }) {
+  const { role } = useDemo()
+  const render = entries => entries.map(([label, href, icon]) => <Link key={href} href={href} title={collapsed ? label : undefined} onClick={onNavigate} className={`nav-link ${route.path === href || (href !== '/markets' && route.path.startsWith(`${href}/`)) ? 'active' : ''}`}><Icon name={icon} /><span>{label}</span>{label === 'Signal AI' && <span className="nav-tag">AI</span>}</Link>)
+  return <><div className="nav-group">{render(primary)}</div><div className="nav-label">WORKSPACE</div><div className="nav-group">{render(secondary)}</div>{route.feature === 'creator' && <><div className="nav-label">CREATOR TOOLS</div>{render([['Created markets', '/creator/markets', 'grid'], ['Analytics', '/creator/analytics', 'chart'], ['Creator fees', '/creator/fees', 'gift']])}</>}{role === 'moderator' && <><div className="nav-label">DEMO MODERATION</div>{render([['Moderation', '/moderation', 'shield'], ['Reports', '/moderation/reports', 'alert'], ['Action history', '/moderation/activity', 'clock']])}</>}</>
+}
+export default function AppShell({ children, route }) {
+  const demo = useDemo(), community = useCommunity()
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobile, setMobile] = useState(false)
+  const [search, setSearch] = useState('')
+  const unread = [...demo.notifications,...community.notifications].filter(item => !item.read).length
+  return <div className={`app-shell ${collapsed ? 'is-collapsed' : ''} ${demo.settings.compact ? 'compact-density' : ''}`}><a className="skip-link" href="#main-content">Skip to content</a><MobileChrome route={route} /><aside className="sidebar"><Brand /><div className="workspace-label"><span className="workspace-icon">P</span><div><strong>Personal workspace</strong><small>Explore the possibilities</small></div></div><Navigation route={route} collapsed={collapsed} /><div className="sidebar-bottom"><div className="sidebar-callout"><Icon name="sparkles" /><strong>A little context. A clearer view.</strong><p>Explore the Signal AI workspace.</p><Link href="/ai">Open Signal AI <Icon name="arrow" size={14} /></Link></div><Link href="/profile" className="sidebar-profile"><span className="avatar purple">{demo.settings.name.slice(0,2).toUpperCase()}</span><div><strong>{demo.settings.name}</strong><small>Your account</small></div><Icon name="down" size={15} /></Link></div></aside><div className="app-body"><header className="topbar"><Button className="icon-button desktop-toggle" aria-label="Toggle sidebar" icon="panel" onClick={() => setCollapsed(!collapsed)} /><Button className="icon-button mobile-toggle" aria-label="Open navigation" icon="menu" onClick={() => setMobile(true)} /><div className="breadcrumbs"><span>Workspace</span><Icon name="chevron" size={13} /><strong>{route.feature === 'discovery' ? 'Explore' : route.name}</strong></div><form className="header-search" onSubmit={event => { event.preventDefault(); navigate(`/search?q=${encodeURIComponent(search)}`) }}><Icon name="search" size={16} /><input aria-label="Search all markets" placeholder="Search markets…" value={search} onChange={event => setSearch(event.target.value)} /><kbd>↵</kbd></form><Link className="icon-button notification-button" href="/notifications" aria-label={`${unread} unread notifications`}><Icon name="bell" />{unread > 0 && <i />}</Link><WalletControl /></header><main id="main-content" className="page-container">{!demo.live && route.priority === 'future' && <div className="future-label">Future module <span>· Interactive frontend preview</span></div>}{children}</main><footer className="app-footer"><span>© 2026 Panta Signal</span><div><Link href="/legal/risk">Risk disclosure</Link><span className="status-dot" />Connected workspace</div></footer></div><Modal open={mobile} onClose={() => setMobile(false)} title="Navigation"><Brand /><Navigation route={route} onNavigate={() => setMobile(false)} /></Modal></div>
+}

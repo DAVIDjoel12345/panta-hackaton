@@ -1,0 +1,8 @@
+import { useState } from 'react'
+export default function PriceChart({ market }) {
+  const [range, setRange] = useState('1M')
+  if (!market) return null
+  const data = range === '1D' ? market.history.slice(-5) : range === '1W' ? market.history.slice(-9) : market.history
+  const points = data.map((v, i) => `${40 + i * (600 / (data.length - 1))},${205 - v * 1.7}`).join(' ')
+  return <div className="chart"><div className="chart-toolbar"><div><strong>{market.yes}%</strong><span className={market.movement >= 0 ? 'positive' : 'negative'}> {market.movement >= 0 ? '+' : ''}{market.movement} pp</span><small>Illustrative YES price history</small></div><div className="segmented">{['1D', '1W', '1M'].map(item => <button key={item} className={range === item ? 'selected' : ''} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}</div></div><svg viewBox="0 0 690 250" role="img" aria-label={`Illustrative ${range} YES price chart ending at ${market.yes} percent`}><defs><linearGradient id={`fill-${market.id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#7357FF" stopOpacity=".25" /><stop offset="100%" stopColor="#7357FF" stopOpacity="0" /></linearGradient></defs>{[0, 25, 50, 75, 100].map(v => <g key={v}><line x1="40" x2="640" y1={205-v*1.7} y2={205-v*1.7} stroke="#272C38" strokeDasharray="3 5" /><text x="650" y={209-v*1.7}>{v}%</text></g>)}<polygon points={`40,205 ${points} 640,205`} fill={`url(#fill-${market.id})`} /><polyline points={points} fill="none" stroke="#9B86FF" strokeWidth="2.5" /><circle cx="640" cy={205-market.yes*1.7} r="4" fill="#B6A6FF" /><text x="40" y="238">Earlier snapshot</text><text x="537" y="238">Oct 05, 2026</text></svg></div>
+}
