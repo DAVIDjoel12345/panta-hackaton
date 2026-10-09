@@ -10,6 +10,7 @@ export default function LiveScreen({route,params,children}){
  const demo=useDemo()
  if(route.path==='/'||route.feature==='information')return children
  if(['discovery','markets'].includes(route.feature))return <LiveMarkets key={location.pathname} route={route} params={params} marketId={params.marketId}/>
+ if(['portfolio','positions'].includes(route.feature))return <FeatureWorkspace route={route} params={params}/>
  if(demo.loading)return <Panel className="padded"><h1>Connecting to your workspace...</h1></Panel>
  if(demo.error)return <Panel className="padded"><h1>Backend unavailable</h1><p>{demo.error}</p><Button onClick={demo.refresh}>Retry connection</Button></Panel>
  if(route.feature==='auth')return <LiveAuthView route={route}/>

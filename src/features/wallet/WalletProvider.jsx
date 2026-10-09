@@ -62,7 +62,7 @@ export default function WalletProvider({ children }) {
     return events?.on('change', change => {
       if (!change.accounts) return
       version.current++
-      current.current = change.accounts[0] || null
+      current.current = change.accounts.find(candidate => candidate.chains?.some(chain => chain.startsWith('solana:'))) || null
       setAccount(current.current)
       setError('')
     })

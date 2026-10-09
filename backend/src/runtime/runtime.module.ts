@@ -70,13 +70,13 @@ class RuntimeController {
     @Req()
     req: Request,
     @Query('wallet')
-    wallet: string) { (await this.store.require(req.headers.cookie)); this.store.rate('positions:' + req.ip, 60); return this.panta.client.positions(wallet); }
+    wallet: string) { this.store.rate('positions:' + req.ip, 60); return this.panta.client.positions(wallet); }
     @Get('wallets/:wallet/trades')
     async walletTrades(
     @Req()
     req: Request,
     @Param('wallet')
-    wallet: string) { (await this.store.require(req.headers.cookie)); return this.panta.client.walletTrades(wallet); }
+    wallet: string) { this.store.rate('wallet-trades:' + req.ip, 60); return this.panta.client.walletTrades(wallet); }
     @Get('wallets/:wallet/balances')
     async balances(
     @Req()
