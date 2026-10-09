@@ -1,15 +1,130 @@
-import {useEffect,useRef,useState} from 'react'
-import {getWallets} from '@wallet-standard/app'
-import {WalletContext} from '../../hooks/useWallet.js'
+import { useEffect, useRef, useState } from 'react'
+import { getWallets } from '@wallet-standard/app'
+import { WalletContext } from '../../hooks/useWallet.js'
 import useLiveQuery from '../../hooks/useLiveQuery.js'
-export default function WalletProvider({children}){
- const registry=getWallets(),[wallets,setWallets]=useState(()=>registry.get()),[selected,setSelected]=useState(null),[account,setAccount]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
- const current=useRef(null),version=useRef(0)
- const configuration=useLiveQuery('/panta/config',60000),config=configuration.data
- useEffect(()=>{const update=()=>setWallets(registry.get());const off=[registry.on('register',update),registry.on('unregister',update)];return()=>off.forEach(f=>f())},[registry])
- useEffect(()=>{if(!selected)return;return selected.features['standard:events']?.on('change',change=>{if(change.accounts){version.current++;current.current=change.accounts[0]||null;setAccount(current.current)}})},[selected])
- async function connect(wallet){if(busy)return;setBusy(true);setError('');try{const result=await wallet.features['standard:connect'].connect();current.current=result.accounts[0]||null;version.current++;setSelected(wallet);setAccount(current.current)}catch(e){setError(e.message||'Wallet connection rejected.')}finally{setBusy(false)}}
- async function disconnect(){version.current++;current.current=null;setAccount(null);const wallet=selected;setSelected(null);try{await wallet?.features['standard:disconnect']?.disconnect()}catch{setError('Wallet disconnected from this application.')}}
- async function sign(transaction,chain){const chosen=current.current,epoch=version.current;if(!chosen||!selected)throw Error('Connect a wallet first.');if(!chosen.chains.includes(chain))throw Error('Selected wallet account does not support the required network.');const feature=selected.features['solana:signTransaction'];if(!feature||!chosen.features.includes('solana:signTransaction'))throw Error('This wallet cannot sign Solana transactions.');const [result]=await feature.signTransaction({account:chosen,chain,transaction});if(epoch!==version.current||current.current?.address!==chosen.address)throw Error('Wallet account changed. The transaction was not submitted.');if(!result?.signedTransaction)throw Error('Wallet did not return a signed transaction.');return result.signedTransaction}
- return <WalletContext.Provider value={{wallets:wallets.filter(w=>w.features['standard:connect']&&w.features['solana:signTransaction']),account,address:account?.address||'',selected,busy,error,connect,disconnect,sign,config,configurationError:configuration.error,refreshConfig:configuration.refresh}}>{children}</WalletContext.Provider>
+
+const STORAGE_KEY = 'panta-signal:wallet-name'
+const isSolanaWallet = wallet => Boolean(wallet.features['standard:connect'] && wallet.chains?.some(chain => chain.startsWith('solana:')))
+const solanaAccount = wallet => wallet?.accounts?.find(account => account.chains?.some(chain => chain.startsWith('solana:')))
+const rememberedWallet = () => { try { return localStorage.getItem(STORAGE_KEY) } catch { return null } }
+const rememberWallet = name => { try { if (name) localStorage.setItem(STORAGE_KEY, name); else localStorage.removeItem(STORAGE_KEY) } catch { /* Storage may be unavailable in private browsing. */ } }
+const authorizedWallet = wallets => wallets.find(wallet => wallet.name === rememberedWallet() && solanaAccount(wallet)) || null
+const connectionError = error => {
+  if (error?.name === 'AbortError' || /rejected|cancelled|canceled|denied/i.test(error?.message || '')) return 'Connection was cancelled in your wallet. Choose it again to retry.'
+  return error?.message || 'Wallet connection failed. Please try again.'
+}
+
+export default function WalletProvider({ children }) {
+  const registry = getWallets()
+  const [wallets, setWallets] = useState(() => registry.get().filter(isSolanaWallet))
+  const [selected, setSelected] = useState(() => authorizedWallet(registry.get()))
+  const [account, setAccount] = useState(() => solanaAccount(authorizedWallet(registry.get())) || null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const current = useRef(account)
+  const version = useRef(0)
+  const connecting = useRef(false)
+  const pendingWallet = useRef(null)
+  const configQuery = useLiveQuery('/panta/config', 60000)
+
+  useEffect(() => {
+    const update = () => {
+      const available = registry.get().filter(isSolanaWallet)
+      setWallets(available)
+      if (pendingWallet.current && !available.includes(pendingWallet.current)) {
+        version.current++
+        pendingWallet.current = null
+        setError('The wallet closed during connection. Reopen it and retry.')
+      }
+      if (selected && !available.includes(selected)) {
+        version.current++
+        current.current = null
+        setAccount(null)
+        setSelected(null)
+        setError('The wallet is no longer available. Reopen or enable it to reconnect.')
+      } else if (!selected && !connecting.current) {
+        const remembered = authorizedWallet(available)
+        if (remembered) {
+          current.current = solanaAccount(remembered)
+          version.current++
+          setSelected(remembered)
+          setAccount(current.current)
+        }
+      }
+    }
+    const off = [registry.on('register', update), registry.on('unregister', update)]
+    return () => off.forEach(unsubscribe => unsubscribe())
+  }, [registry, selected])
+
+  useEffect(() => {
+    if (!selected) return
+    const events = selected.features['standard:events']
+    return events?.on('change', change => {
+      if (!change.accounts) return
+      version.current++
+      current.current = change.accounts[0] || null
+      setAccount(current.current)
+      setError('')
+    })
+  }, [selected])
+
+  async function connect(wallet) {
+    if (connecting.current) return
+    const feature = wallet?.features['standard:connect']
+    if (!feature || !wallets.includes(wallet)) {
+      setError('This wallet is no longer available. Refresh the page and try again.')
+      return
+    }
+    connecting.current = true
+    pendingWallet.current = wallet
+    const attempt = ++version.current
+    setBusy(true)
+    setError('')
+    try {
+      const result = await feature.connect()
+      if (attempt !== version.current) return
+      const next = result?.accounts?.find(candidate => candidate.chains?.some(chain => chain.startsWith('solana:')))
+      if (!next) throw new Error('The wallet did not provide a Solana account. Select a Solana account and retry.')
+      current.current = next
+      setSelected(wallet)
+      setAccount(next)
+      rememberWallet(wallet.name)
+    } catch (cause) {
+      if (attempt === version.current) setError(connectionError(cause))
+    } finally {
+      connecting.current = false
+      pendingWallet.current = null
+      setBusy(false)
+    }
+  }
+
+  async function disconnect() {
+    version.current++
+    current.current = null
+    setAccount(null)
+    const wallet = selected
+    setSelected(null)
+    setError('')
+    rememberWallet(null)
+    try {
+      await wallet?.features['standard:disconnect']?.disconnect()
+    } catch {
+      setError('Disconnected from this site. Your wallet may still show this site as authorized.')
+    }
+  }
+
+  async function sign(transaction, chain) {
+    const chosen = current.current
+    const epoch = version.current
+    if (!chosen || !selected) throw Error('Connect a wallet first.')
+    if (!chosen.chains?.includes(chain)) throw Error('Selected wallet account does not support the required network.')
+    const feature = selected.features['solana:signTransaction']
+    if (!feature || !chosen.features?.includes('solana:signTransaction')) throw Error('This wallet cannot sign Solana transactions.')
+    const [result] = await feature.signTransaction({ account: chosen, chain, transaction })
+    if (epoch !== version.current || current.current?.address !== chosen.address) throw Error('Wallet account changed. The transaction was not submitted.')
+    if (!result?.signedTransaction) throw Error('Wallet did not return a signed transaction.')
+    return result.signedTransaction
+  }
+
+  return <WalletContext.Provider value={{ wallets, account, address: account?.address || '', selected, busy, error, connect, disconnect, sign, config: configQuery.data, configurationError: configQuery.error, refreshConfig: configQuery.refresh }}>{children}</WalletContext.Provider>
 }
