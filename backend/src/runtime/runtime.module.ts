@@ -174,7 +174,11 @@ class RuntimeController {
     @Get('bootstrap')
     async bootstrap(
     @Req()
-    req: Request) { return (await this.store.bootstrap(req.headers.cookie)); }
+    req: Request) {
+        const session = await this.store.bootstrap(req.headers.cookie);
+        const transactionReady = Boolean(process.env.PANTA_API_KEY) && this.panta.readiness().ready;
+        return { ...session, capabilities: { ...session.capabilities, wallet: true, trading: transactionReady, claims: transactionReady } };
+    }
     @Get('account/export')
     async export(
     @Req()

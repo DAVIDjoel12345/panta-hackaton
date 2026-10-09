@@ -9,6 +9,8 @@ Set these service variables in Railway (never commit their values):
 - `GEMINI_API_KEY` or `OPENROUTER_API_KEY` for AI.
 - `APP_PUBLIC_URL=https://<your-public-domain>` for the AI provider's site identity. If you use a custom domain, add its full origin to `FRONTEND_ORIGINS`; Railway's generated `RAILWAY_PUBLIC_DOMAIN` is accepted automatically.
 
+Funded wallet actions also require an official Panta deployment policy and matching IDL in `backend/deployments`, `PANTA_DEPLOYMENT_FILE=/app/backend/deployments/<policy>.json`, and an HTTPS `SOLANA_RPC_URL` for the verified cluster. See [the deployment policy requirements](../backend/deployments/README.md). The Panta API key and a wallet connection alone cannot enable safe on-chain trades. Railway also requires Turso for durable transaction recovery before approving a funded action.
+
 Railway injects `PORT`, `RAILWAY_ENVIRONMENT`, and `RAILWAY_PUBLIC_DOMAIN`. Do not set `PORT` to a fixed value or put API keys in `VITE_` variables.
 
 After deployment, `/api/v1/runtime/health` must return JSON with `status: "ok"`; `/api/v1/markets?status=active` must return JSON rather than `index.html`. If the health check fails, inspect the Railway deployment logs for missing database configuration or build errors. If the API still returns HTML, Railway is running an old frontend-only deployment or the service root/config source is not this repository root. A healthy API without live markets usually means `PANTA_API_KEY` is absent or rejected.

@@ -20,7 +20,11 @@ test('real sessions, community permissions, idempotency, events and persistence'
     const content = { title: 'Persisted post', text: 'Private server-owned content.', type: 'Discussion', link: '', marketId: '', attachments: [] };
     let owner, member, post;
     try {
-        assert.equal((await call('/bootstrap')).body.user, null);
+        const bootstrap = (await call('/bootstrap')).body;
+        assert.equal(bootstrap.user, null);
+        assert.equal(bootstrap.capabilities.wallet, true);
+        assert.equal(bootstrap.capabilities.trading, false);
+        assert.equal(bootstrap.capabilities.claims, false);
         assert.equal((await call('/auth/register', { method: 'POST', origin: 'https://hostile.example', body: {} })).status, 403);
         owner = await call('/auth/register', { method: 'POST', body: { email: 'owner@example.test', name: 'Owner', password: ' exact password spaces ' } });
         assert.equal(owner.status, 201);

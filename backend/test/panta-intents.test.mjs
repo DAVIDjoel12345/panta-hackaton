@@ -26,9 +26,18 @@ test('durable intent binding, duplicate prevention, uncertain broadcast and repo
     const client = { cache: new Map(), buyQuote: async (input) => { quotes++; return { quoteId: 'q1', marketId: wallet, side: 'yes', amountUsdc: input.amountUsdc, feeUsdc: '0.02', shares: '2', expiresAt: new Date(Date.now() + 60000).toISOString() }; }, buyBuild: async () => { builds++; return { orderId: 'o1', quoteId: 'q1', wallet, marketId: wallet, side: 'yes', amountUsdc: '1', recentBlockhash: wallet, instructions: [] }; }, submit: async () => ({ status: 'submitted' }), verify: async () => ({ status: 'confirmed' }), report: async () => { if (++reports === 1)
             throw Error('attribution delayed'); return { status: 'processed' }; } };
     const service = new PantaService(store, client);
-    const chain = { rpc: async () => ({}), validate: async () => ({ transaction: 'unsigned', message: 'message', feeLamports: '5000', chain: 'solana:devnet', validatedAt: new Date().toISOString() }), signed: () => 'test-signature', broadcast: async () => { broadcasts++; throw Error('RPC response lost'); }, status: async () => 'confirmed' };
+    const chain = { configuration: () => ({ready:true,chain:'solana:devnet',reason:null}), rpc: async () => ({}), validate: async () => ({ transaction: 'unsigned', message: 'message', feeLamports: '5000', chain: 'solana:devnet', validatedAt: new Date().toISOString() }), signed: () => 'test-signature', broadcast: async () => { broadcasts++; throw Error('RPC response lost'); }, status: async () => 'confirmed' };
     Object.assign(service.chain, chain);
     try {
+        const previousRailway=process.env.RAILWAY_ENVIRONMENT;
+        process.env.RAILWAY_ENVIRONMENT='production';
+        try {
+            assert.equal(service.readiness().ready,false);
+            assert.match(service.readiness().reason,/TURSO_DATABASE_URL/);
+        } finally {
+            if(previousRailway===undefined)delete process.env.RAILWAY_ENVIRONMENT;
+            else process.env.RAILWAY_ENVIRONMENT=previousRailway;
+        }
         const token = await store.authenticate({ email: 'intent@example.test', password: 'long password for test', name: 'Tester' }, true, 'test'), cookie = 'panta_session=' + token;
         const other = await store.authenticate({ email: 'other@example.test', password: 'long password for test', name: 'Other' }, true, 'other');
         const body = { kind: 'buy', input: { wallet, marketId: wallet, side: 'yes', amountUsdc: '1' }, requestId: randomUUID() };

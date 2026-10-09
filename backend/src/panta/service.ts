@@ -53,12 +53,21 @@ export class PantaService {
     private error(error: unknown) { return error instanceof PantaError ? (error.getResponse() as {
         message: string;
     }).message : 'Operation interrupted. Check status before retrying.'; }
+    readiness() {
+        const chain = this.chain.configuration();
+        const durable = !process.env.RAILWAY_ENVIRONMENT || this.store.db.remote;
+        return { ...chain, ready: chain.ready && durable, reason: !durable ? 'Hosted transactions require TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for durable recovery.' : chain.reason };
+    }
+    private requireReadiness() {
+        const status = this.readiness();
+        if (!status.ready) throw new PantaError('CONFIGURATION_REQUIRED', status.reason || 'Transaction infrastructure is unavailable.', 503);
+    }
     async config() { let permission: null | boolean = null; let providerError: string | null = null; try {
         permission = (await this.client.account()).canCreateMarkets;
     }
     catch (e) {
         providerError = this.error(e);
-    } return { source: 'Panta', pollIntervalMs: 10000, canCreateMarkets: permission, providerError, ...this.chain.configuration() }; }
+    } return { source: 'Panta', pollIntervalMs: 10000, canCreateMarkets: permission, providerError, ...this.readiness() }; }
     async list(cookie?: string) { const user = (await this.user(cookie)); return ((await this.store.db.prepare('SELECT value FROM transaction_intents WHERE user_id=? ORDER BY rowid DESC LIMIT 200').all(String(user.id))) as {
         value: string;
     }[]).map(row => this.public(JSON.parse(row.value) as Intent)); }
@@ -115,6 +124,7 @@ export class PantaService {
     }
     private binding(intent: Intent): TransactionBinding { return { kind: intent.kind, wallet: intent.wallet, market: String(intent.kind === 'create' ? intent.quote?.expectedEventPda : intent.input.marketId), amountBase: intent.kind === 'buy' ? c.baseUnits(String(intent.input.amountUsdc)).toString() : intent.kind === 'create' ? String(intent.quote?.paymentUsdc) : '0', ...(intent.kind === 'buy' ? { side: String(intent.input.side), quotedShares: String(intent.quote?.shares), maxSlippageBps: Number(intent.input.maxSlippageBps) } : {}), ...(intent.kind === 'create' ? { question: String(intent.input.question), resolutionRule: String(intent.input.resolutionRule), startTime: Number(intent.input.startTime), endTime: Number(intent.input.endTime), resolutionTime: Number(intent.input.resolutionTime) } : {}) }; }
     async build(cookie: string | undefined, id: string) {
+        this.requireReadiness();
         return this.lock(id, async () => {
             const intent = (await this.get(cookie, id));
             if (intent.signature)
@@ -159,6 +169,7 @@ export class PantaService {
         });
     }
     async broadcast(cookie: string | undefined, id: string, raw: unknown) {
+        this.requireReadiness();
         return this.lock(id, async () => {
             const intent = (await this.get(cookie, id));
             const { transaction } = z.object({ transaction: z.string().min(1).max(20000) }).strict().parse(raw);
