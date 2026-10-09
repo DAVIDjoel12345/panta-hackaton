@@ -1,4 +1,4 @@
-﻿# Panta Signal
+# Panta Signal
 
 React/Vite frontend with a Nest backend, persisted Signal accounts and communities, live Panta market reads, external Gemini conversations, Wallet Standard connection, and a guarded Solana transaction-intent flow.
 
