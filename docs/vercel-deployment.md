@@ -9,6 +9,8 @@ The root `vercel.json` defines two services in one Vercel project:
 
 There are no internal-only services and no bindings. React executes in the browser and calls relative `/api/v1` URLs. Vercel bindings are available only to server functions at runtime; putting a bound URL in `VITE_*` would not work. The backend calls external Panta, AI, news, Solana RPC and Turso endpoints. The local gateway and extra local backend worker are development tools, not deployment services.
 
+The backend service sets `entrypoint: "src/main.ts"` and `outputDirectory: "."`. This makes Vercel bundle the NestJS source with its ESM package context. Building `dist/main.js` into the function root instead has caused `Cannot use import statement outside a module` in [Vercel Services issue #17651](https://github.com/vercel/vercel/issues/17651).
+
 ## Environment
 
 Create a Turso database and add these **server-only** variables in Vercel Project Settings. Use separate databases and provider keys for Preview and Production.
