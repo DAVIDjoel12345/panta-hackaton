@@ -2,9 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { getWallets } from '@wallet-standard/app'
 import { WalletContext } from '../../hooks/useWallet.js'
 import useLiveQuery from '../../hooks/useLiveQuery.js'
+import { injectedWallets } from './injectedWallets.js'
 
 const STORAGE_KEY = 'panta-signal:wallet-name'
 const isSolanaWallet = wallet => Boolean(wallet.features['standard:connect'] && wallet.chains?.some(chain => chain.startsWith('solana:')))
+const availableWallets = (registry, selected) => {
+  const standard = registry.get().filter(isSolanaWallet)
+  const injected = injectedWallets()
+  const wallets = [...standard, ...injected.filter(wallet => !standard.some(option => option.name === wallet.name))]
+  if (selected && injected.includes(selected) && !wallets.includes(selected)) wallets.push(selected)
+  return wallets
+}
 const solanaAccount = wallet => wallet?.accounts?.find(account => account.chains?.some(chain => chain.startsWith('solana:')))
 const rememberedWallet = () => { try { return localStorage.getItem(STORAGE_KEY) } catch { return null } }
 const rememberWallet = name => { try { if (name) localStorage.setItem(STORAGE_KEY, name); else localStorage.removeItem(STORAGE_KEY) } catch { /* Storage may be unavailable in private browsing. */ } }
@@ -16,9 +24,9 @@ const connectionError = error => {
 
 export default function WalletProvider({ children }) {
   const registry = getWallets()
-  const [wallets, setWallets] = useState(() => registry.get().filter(isSolanaWallet))
-  const [selected, setSelected] = useState(() => authorizedWallet(registry.get()))
-  const [account, setAccount] = useState(() => solanaAccount(authorizedWallet(registry.get())) || null)
+  const [wallets, setWallets] = useState(() => availableWallets(registry))
+  const [selected, setSelected] = useState(() => authorizedWallet(availableWallets(registry)))
+  const [account, setAccount] = useState(() => solanaAccount(authorizedWallet(availableWallets(registry))) || null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const current = useRef(account)
@@ -29,8 +37,8 @@ export default function WalletProvider({ children }) {
 
   useEffect(() => {
     const update = () => {
-      const available = registry.get().filter(isSolanaWallet)
-      setWallets(available)
+      const available = availableWallets(registry, selected)
+      setWallets(previous => previous.length === available.length && previous.every((wallet, index) => wallet === available[index]) ? previous : available)
       if (pendingWallet.current && !available.includes(pendingWallet.current)) {
         version.current++
         pendingWallet.current = null
@@ -53,7 +61,9 @@ export default function WalletProvider({ children }) {
       }
     }
     const off = [registry.on('register', update), registry.on('unregister', update)]
-    return () => off.forEach(unsubscribe => unsubscribe())
+    const poll = setInterval(update, 1200)
+    window.addEventListener('focus', update)
+    return () => { off.forEach(unsubscribe => unsubscribe()); clearInterval(poll); window.removeEventListener('focus', update) }
   }, [registry, selected])
 
   useEffect(() => {
