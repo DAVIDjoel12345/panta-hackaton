@@ -19,13 +19,14 @@ export function rememberPantaCatalog(key,data,now=Date.now()){
 }
 export async function readPantaCatalog(request,{category,status,signal,onPage}){
   const rows=new Map(),seen=new Set()
-  let cursor='',pages=0,oldest=Infinity,stale=false
+  let cursor='',pages=0,oldest=Infinity,firstPageAt=null,stale=false
   do{
     const params=new URLSearchParams({limit:'50',...(cursor?{cursor}:{}),...(category!=='all'?{category}:{}),...(status!=='all'&&!['resolved','cancelled'].includes(status)?{status}:{})})
     const response=await request('/markets?'+params,{signal})
     if(!Array.isArray(response.items))throw Error('Panta returned an incomplete catalog page.')
     for(const item of response.items)rows.set(item.marketId,item)
     const observed=Date.parse(response.retrievedAt)
+    if(pages===0)firstPageAt=response.retrievedAt||null
     if(Number.isFinite(observed))oldest=Math.min(oldest,observed)
     else stale=true
     stale ||= response.cacheStatus==='stale'
@@ -36,5 +37,15 @@ export async function readPantaCatalog(request,{category,status,signal,onPage}){
     }
     if(cursor)onPage?.({items:[...rows.values()],retrievedAt:Number.isFinite(oldest)?new Date(oldest).toISOString():null,source:'Panta',pages,cacheStatus:stale?'stale':'fresh',complete:false})
   }while(cursor)
-  return {items:[...rows.values()],retrievedAt:Number.isFinite(oldest)?new Date(oldest).toISOString():null,source:'Panta',pages,cacheStatus:stale?'stale':'fresh',complete:true}
+  return {items:[...rows.values()],retrievedAt:Number.isFinite(oldest)?new Date(oldest).toISOString():null,firstPageAt,fullCatalogAt:new Date().toISOString(),source:'Panta',pages,cacheStatus:stale?'stale':'fresh',complete:true}
+}
+
+export async function refreshPantaCatalogPage(request,{category,status,signal,previous}){
+  const params=new URLSearchParams({limit:'50',...(category!=='all'?{category}:{}),...(status!=='all'&&!['resolved','cancelled'].includes(status)?{status}:{})})
+  const response=await request('/markets?'+params,{signal})
+  if(!Array.isArray(response.items))throw Error('Panta returned an incomplete catalog page.')
+  const rows=new Map([...response.items,...previous.items].map(item=>[item.marketId,item]))
+  // The newest page wins if an existing market changed.
+  for(const item of response.items)rows.set(item.marketId,item)
+  return {...previous,items:[...rows.values()],firstPageAt:response.retrievedAt||null,cacheStatus:response.cacheStatus==='stale'?'stale':'fresh',complete:true}
 }

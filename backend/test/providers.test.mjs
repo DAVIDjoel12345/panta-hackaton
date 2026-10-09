@@ -76,6 +76,8 @@ test('market observations survive a missing provider spot quote and retain their
         assert.equal(providerCatalog.items[0].yesPrice, '0.61');
         assert.equal(providerCatalog.items[0].volumeUsdc, '14.00');
         assert.equal(providerCatalog.items[0].priceStatus, 'catalog');
+        assert.equal(providerCatalog.items[0].priceObservedAt, null, 'Catalog retrieval is not a live price observation');
+        assert.equal(providerCatalog.items[0].priceSource, 'catalog');
         const statuses = [];
         service.panta.markets = async (query) => { statuses.push(query.status); return { items: [{ marketId: id, phase: query.status, title: 'Active market' }], nextCursor: null }; };
         const active = await service.markets(undefined, undefined, false, { status: 'active' });

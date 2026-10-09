@@ -52,7 +52,7 @@ export class LiveServices {
                     if (item.resolved || ['resolved', 'cancelled'].includes(item.phase))
                         return item;
                     if (item.yesPrice != null && item.noPrice != null)
-                        return { ...item, priceStatus: 'catalog', priceObservedAt: catalog.retrievedAt };
+                        return { ...item, priceStatus: 'catalog', priceSource: 'catalog', priceObservedAt: null };
                     const sample = latest.get(item.marketId);
                     return sample ? { ...item, yesPrice: sample.yes_price, noPrice: sample.no_price, volumeUsdc: item.volumeUsdc ?? sample.volume_usdc, priceStatus: 'last_observed', priceObservedAt: new Date(sample.observed_at).toISOString() } : item;
                 }) };
