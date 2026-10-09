@@ -16,3 +16,5 @@ Wallet signing for funded buy, create, claim and creator-fee operations is gated
 Checks: `npm test --prefix backend`, `npm run build`, `npm run lint`, `node scripts/verify-frontend.mjs`. Browser checks require the running stack and Chrome remote debugging on port 9223: `node scripts/panta-ui-check.mjs` and `node scripts/panta-ai-browser-check.mjs`.
 
 The older implementation notes in `docs/` describe earlier demo stages and can be stale; use the integration guide and capability matrix for current live-service boundaries.
+
+Deploy both services on Vercel: see [deployment setup](docs/vercel-deployment.md) for hosted database configuration, data import, routing and verification.

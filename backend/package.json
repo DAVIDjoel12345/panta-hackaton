@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Panta Signal live local backend with persistent accounts and communities",
   "engines": {
-    "node": ">=24"
+    "node": "24.x"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
+    "@libsql/client": "^0.18.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/platform-express": "^12.0.1",

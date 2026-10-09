@@ -41,3 +41,5 @@ dist-ssr
 *.db-wal
 backend/data/
 .panta-reference/
+
+.vercel/
