@@ -1,11 +1,10 @@
 import { useWallet } from '../../hooks/useWallet.js'
 import { Button, Badge, Link } from '../../components/ui/primitives.jsx'
-import { isMobileBrowser, mobileWalletLinks } from './mobileWallets.js'
+import { mobileWalletLinks } from './mobileWallets.js'
 
 export default function WalletPanel() {
   const wallet = useWallet()
   const connected = Boolean(wallet.address)
-  const mobile = isMobileBrowser(navigator.userAgent)
   const appLinks = mobileWalletLinks(window.location)
 
   return <div className="stack">
@@ -14,12 +13,9 @@ export default function WalletPanel() {
       <p className="mono" style={{ overflowWrap: 'anywhere' }}>{wallet.address}</p>
       <Button disabled={wallet.busy} onClick={wallet.disconnect}>Disconnect wallet</Button>
     </> : <>
-      {wallet.wallets.map(option => <Button key={option.name} disabled={wallet.busy} onClick={() => wallet.connect(option)}>{wallet.busy ? 'Connecting…' : `Connect ${option.name}`}</Button>)}
-      {!wallet.wallets.length && <>
-        <p role="status">No Solana wallet is available in this browser.</p>
-        {mobile && <div className="button-row">{appLinks.map(app => <a className="button primary" key={app.name} href={app.href}>Open in {app.name}</a>)}</div>}
-        <p>{mobile ? 'Choose the wallet app you use, then connect on this page when it opens there.' : 'Enable a Solana wallet extension, then return here.'}</p>
-      </>}
+      {wallet.wallets.length > 0 && <div className="stack"><strong>Wallets available in this browser</strong>{wallet.wallets.map(option => <Button key={option.name} disabled={wallet.busy} onClick={() => wallet.connect(option)}>{wallet.busy ? 'Connecting…' : `Connect ${option.name}`}</Button>)}</div>}
+      {!wallet.wallets.length && <p role="status">No wallet is connected to this browser yet. Choose a mobile wallet app below, or enable a Solana wallet extension on desktop.</p>}
+      <div className="stack"><strong>Open this page in a mobile wallet app</strong><div className="button-row">{appLinks.map(app => <a className="button secondary" key={app.name} href={app.href}>Open in {app.name}</a>)}</div><small>After this page opens in the wallet app, tap Connect above and approve in the wallet. Your keys remain in the wallet.</small></div>
     </>}
     {wallet.error && <p role="alert">{wallet.error}</p>}
     {connected && wallet.config?.chain && !wallet.account?.chains?.includes(wallet.config.chain) && <p role="status">Connected account does not support {wallet.config.chain}. Select a compatible account in your wallet before trading.</p>}
