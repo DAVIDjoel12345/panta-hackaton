@@ -1,0 +1,27 @@
+1
+00:00:00,000 --> 00:00:08,500
+Panta Signal | Live product tour
+
+2
+00:00:09,000 --> 00:00:23,000
+Explore live Panta market questions and current prices.
+
+3
+00:00:24,000 --> 00:00:32,000
+Open a market for its question, phase, and resolution context.
+
+4
+00:00:32,000 --> 00:00:54,000
+Switch YES/NO and time range on the live Panta price chart.
+
+5
+00:00:54,000 --> 00:01:08,000
+Review the market criteria and sources before interpreting a price.
+
+6
+00:01:08,000 --> 00:01:24,000
+Signal AI explains the current Panta snapshot and evidence to check.
+
+7
+00:01:24,000 --> 00:01:29,000
+Wallet trading remains gated pending Panta's verified on-chain policy.

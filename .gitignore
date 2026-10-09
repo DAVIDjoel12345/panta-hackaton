@@ -29,6 +29,8 @@ dist-ssr
 .browser-review-live/
 .tools/
 .models/
+/panta-signal-demo.mp4
+/panta-signal-demo-compatible.mp4
 .env
 .env.*
 !.env.example
