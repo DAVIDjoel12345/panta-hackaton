@@ -11,6 +11,8 @@ export interface EnvironmentContract {
   VERCEL_ENV?: string;
   VERCEL_URL?: string;
   VERCEL_PROJECT_PRODUCTION_URL?: string;
+  RAILWAY_ENVIRONMENT?: string;
+  RAILWAY_PUBLIC_DOMAIN?: string;
   SESSION_SECRET?: string;
   SESSION_TTL_SECONDS?: string;
   SESSION_COOKIE_NAME?: string;

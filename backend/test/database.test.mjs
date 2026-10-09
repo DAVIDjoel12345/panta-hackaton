@@ -60,4 +60,5 @@ test('Vercel refuses ephemeral SQLite and accepts only explicit trusted domains'
   await assert.rejects(invalid.ready,/Configure a remote/);
   assert.deepEqual(allowedOrigins({VERCEL:'1',VERCEL_URL:'preview.vercel.app',FRONTEND_ORIGINS:'https://panta.example'}),['https://panta.example','https://preview.vercel.app']);
   assert.deepEqual(allowedOrigins({VERCEL:'1'}),[]);
+  assert.deepEqual(allowedOrigins({RAILWAY_PUBLIC_DOMAIN:'panta.example.up.railway.app'}),['http://127.0.0.1:5174','http://localhost:5173','http://127.0.0.1:5173','https://panta.example.up.railway.app']);
 });

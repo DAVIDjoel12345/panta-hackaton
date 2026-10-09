@@ -1,9 +1,13 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { AppModule } from './app.module.js';
 import { inspectPort } from './runtime/startup.js';
-const hosted = process.env.VERCEL === '1';
+const railway = Boolean(process.env.RAILWAY_ENVIRONMENT);
+const hosted = process.env.VERCEL === '1' || railway;
 const rawPort = process.env.PORT || (hosted ? '3000' : '');
 if (!rawPort || !/^\d+$/.test(rawPort) || Number(rawPort) < 1 || Number(rawPort) > 65535) {
   throw new Error('Set an explicit PORT between 1 and 65535. See .env.example.');
@@ -21,6 +25,16 @@ app.enableShutdownHooks();
 app.useBodyParser('json', {limit:hosted ? '4mb' : '30mb'});
 app.setGlobalPrefix('api/v1');
 app.use((_req: unknown, res: {setHeader(name:string,value:string):void}, next:()=>void)=>{res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');next()});
+if (railway) {
+  const staticRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../dist');
+  const indexFile = join(staticRoot, 'index.html');
+  if (!existsSync(indexFile)) throw new Error('Railway frontend build is missing. Build the root Vite app before starting the backend.');
+  app.useStaticAssets(staticRoot, { index: false });
+  app.use((req: {method:string;path:string}, res: {sendFile(path:string):void}, next:()=>void) => {
+    if (req.method !== 'GET' || req.path === '/api' || req.path.startsWith('/api/')) return next();
+    res.sendFile(indexFile);
+  });
+}
 try{await app.listen(port, hosted ? '0.0.0.0' : '127.0.0.1')}
 catch(error){await app.close();if((error as NodeJS.ErrnoException).code==='EADDRINUSE')throw new Error(`Port ${port} became occupied during startup. Run the start command again to detect the existing backend.`);throw error}
 }

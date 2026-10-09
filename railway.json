@@ -1,0 +1,10 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "npm ci && npm ci --prefix backend && npm run build && npm run build --prefix backend"
+  },
+  "deploy": {
+    "startCommand": "node backend/dist/main.js",
+    "healthcheckPath": "/api/v1/runtime/health"
+  }
+}
