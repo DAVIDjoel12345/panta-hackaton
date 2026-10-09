@@ -11,6 +11,8 @@ There are no internal-only services and no bindings. React executes in the brows
 
 The backend service sets `entrypoint: "src/main.ts"` and `outputDirectory: "."`. This makes Vercel bundle the NestJS source with its ESM package context. Building `dist/main.js` into the function root instead has caused `Cannot use import statement outside a module` in [Vercel Services issue #17651](https://github.com/vercel/vercel/issues/17651).
 
+The backend lockfile pins `uuid@11` only below `rpc-websockets`. Its CommonJS build is needed by Solana's websocket dependency in Vercel's function loader; [uuid 12 and later dropped CommonJS support](https://github.com/uuidjs/uuid).
+
 ## Environment
 
 Create a Turso database and add these **server-only** variables in Vercel Project Settings. Use separate databases and provider keys for Preview and Production.
